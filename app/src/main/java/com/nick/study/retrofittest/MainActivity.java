@@ -1,54 +1,48 @@
 package com.nick.study.retrofittest;
 
-import android.os.Environment;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
+import android.support.v7.app.AppCompatActivity;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import com.nick.study.retrofittest.bean.User;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import okhttp3.MediaType;
-import okhttp3.MultipartBody;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
+import com.nick.study.retrofittest.annotation.ViewBindUtil;
+import com.nick.study.retrofittest.annotation.ViewClick;
 
 public class MainActivity extends AppCompatActivity {
-    final static String TAG = "Retrofit";
+    final static String TAG = "MainActivity";
+
+    @com.nick.study.ViewBind(R.id.user_tv)
     TextView mTextView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mTextView = (TextView) findViewById(R.id.user_tv);
+//        mTextView = (TextView) findViewById(R.id.user_tv);
 
-        Call<User>  userCall = ApiFactory.gitHubAPI().getUserInfo("nickyangjun");
-        userCall.enqueue(new Callback<User>() {
+        ViewBindUtil.initViewBind(this);
+        mTextView.setText("hahaha!!!! annotation success!!!!");
 
-            @Override
-            public void onResponse(Call<User> call, Response<User> response) {
-                Log.i(TAG, "name:  " + response.body().login + " id: " + response.body().id);
-                mTextView.setText("name:  " + response.body().login + " id: " + response.body().id);
-            }
 
-            @Override
-            public void onFailure(Call<User> call, Throwable t) {
+//        Call<User>  userCall = ApiFactory.gitHubAPI().getUserInfo("nickyangjun");
+//        userCall.enqueue(new Callback<User>() {
+//
+//            @Override
+//            public void onResponse(Call<User> call, Response<User> response) {
+//                Log.i(TAG, "name:  " + response.body().login + " id: " + response.body().id);
+//                mTextView.setText("name:  " + response.body().login + " id: " + response.body().id);
+//            }
+//
+//            @Override
+//            public void onFailure(Call<User> call, Throwable t) {
+//
+//            }
+//        });
 
-            }
-        });
+    }
 
+    @ViewClick(id = R.id.user_tv)
+    public void onClick(){
+        Toast.makeText(this,"hahaha!!!! annotation click success!!!!",Toast.LENGTH_SHORT).show();
     }
 }
