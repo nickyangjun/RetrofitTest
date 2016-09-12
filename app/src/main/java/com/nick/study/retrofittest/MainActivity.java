@@ -5,13 +5,15 @@ import android.support.v7.app.AppCompatActivity;
 import android.widget.TextView;
 import android.widget.Toast;
 
+
+import com.nick.study.annotation.ViewBind;
 import com.nick.study.retrofittest.annotation.ViewBindUtil;
 import com.nick.study.retrofittest.annotation.ViewClick;
 
 public class MainActivity extends AppCompatActivity {
     final static String TAG = "MainActivity";
 
-    @com.nick.study.ViewBind(R.id.user_tv)
+    @ViewBind(R.id.user_tv)
     TextView mTextView;
 
     @Override

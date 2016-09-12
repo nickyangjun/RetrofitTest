@@ -1,12 +1,13 @@
 package com.nick.study;
 
 import com.google.auto.service.AutoService;
+import com.nick.study.annotation.ViewBind;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeSpec;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -23,10 +24,9 @@ public class ViewBindProcessor extends AbstractProcessor {
 
     @Override
     public Set<String> getSupportedAnnotationTypes() {
-        Set<String> set = Collections.EMPTY_SET;
-        set.add(ViewBind.class.getCanonicalName());
-        set.add(ViewClick.class.getCanonicalName());
-        return set;
+        Set<String> types = new LinkedHashSet<>();
+        types.add(ViewBind.class.getCanonicalName());
+        return types;
     }
 
     @Override
