@@ -40,7 +40,7 @@ public class ViewBindUtil {
                     @Override
                     public void onClick(View v) {
                         try {
-                            method.invoke(activity, new Class[0]); //调用自定义的点击事件
+                            method.invoke(activity, null); //调用自定义的点击事件
                         } catch (IllegalAccessException e) {
                             e.printStackTrace();
                         } catch (InvocationTargetException e) {

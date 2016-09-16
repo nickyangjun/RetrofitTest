@@ -1,5 +1,6 @@
 package com.nick.study.retrofittest;
 
+import android.app.Activity;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.TextView;
@@ -15,6 +16,9 @@ public class MainActivity extends AppCompatActivity {
 
     @ViewBind(R.id.user_tv)
     TextView mTextView;
+
+    @ViewBind(R.id.user_tv)
+    TextView mTextView2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
