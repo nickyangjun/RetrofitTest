@@ -5,10 +5,18 @@ import com.nick.study.annotation.ViewBind;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
+import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import com.squareup.javapoet.TypeVariableName;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -26,6 +34,8 @@ import javax.tools.Diagnostic;
 
 @AutoService(Processor.class)
 public class ViewBindProcessor extends AbstractProcessor {
+    private static final String BINDING_CLASS_SUFFIX = "$$ViewBinder";//生成类的后缀 以后会用反射去取
+    private static final ClassName VIEW_BINDER = ClassName.get("com.nick.study.viewinject", "ViewBinder");
     private Elements elementUtils;
     private Types typeUtils;
     private Filer filer;
@@ -46,35 +56,67 @@ public class ViewBindProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+        Map<String, ViewBindInfo> targetClassMap = new LinkedHashMap<>();
         Set<? extends Element> set = roundEnv.getElementsAnnotatedWith(ViewBind.class);
         for (Element element : set) {
-            processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,"process: "+element.getSimpleName());
             if (element.getKind() != ElementKind.FIELD) {
                 processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "only support class field");
                 break;
             }
-            ViewBind annotation = element.getAnnotation(ViewBind.class);
-            ClassName activity = ClassName.get("android.app","Activity");
-            MethodSpec main = MethodSpec.methodBuilder("main")
-                    .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                    .returns(void.class)
-                    .addParameter(String[].class, "args")
-                    .addParameter(activity, "a")
-                    .addStatement("$T.out.println($S)", System.class, "Hello, JavaPoet!")
-                    .addStatement("a.findViewById($L)",annotation.value())
+            TypeElement enclosingElement = (TypeElement) element.getEnclosingElement();
+            String packageName = getPackageName(enclosingElement);
+            String className = getClassName(enclosingElement,packageName);
+            String classFullPath = packageName+"."+className;
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,"process: "+classFullPath);
+            ViewBindInfo viewBindInfo = targetClassMap.get(classFullPath);
+            if(viewBindInfo == null){
+                viewBindInfo = new ViewBindInfo();
+                targetClassMap.put(classFullPath,viewBindInfo);
+            }
+            viewBindInfo.packageName = packageName;
+            viewBindInfo.className = className;
+            viewBindInfo.elementList.add(element);
+        }
+        buildViewBindClass(targetClassMap);
+        return false;
+    }
+
+    private void buildViewBindClass( Map<String, ViewBindInfo> targetClassMap){
+        if(targetClassMap.size() == 0){
+            return;
+        }
+        for (Map.Entry<String, ViewBindInfo> item : targetClassMap.entrySet()) {
+            String newClassName = item.getValue().className+BINDING_CLASS_SUFFIX;
+            String packageName = item.getValue().packageName;
+            String methodName = "viewBind";
+            TypeElement enclosingElement = (TypeElement) item.getValue().elementList.get(0).getEnclosingElement();
+            ClassName typeClassName = ClassName.bestGuess(getClassName(enclosingElement, packageName));
+            ClassName activity = ClassName.get("android.app", "Activity");
+            MethodSpec.Builder viewBindMethodBuilder = MethodSpec.methodBuilder(methodName)
+                    .addModifiers(Modifier.PUBLIC)
+                    .returns(TypeName.VOID)
+                    .addAnnotation(Override.class)
+                    .addParameter(typeClassName, "target", Modifier.FINAL);
+
+            for(Element element : item.getValue().elementList){
+                int id = element.getAnnotation(ViewBind.class).value();
+                ClassName viewClass = ClassName.bestGuess(element.asType().toString());
+                viewBindMethodBuilder.addStatement("target.$L=($T)target.findViewById($L)",element.getSimpleName().toString(),viewClass, id);
+            }
+            MethodSpec viewBindMethod = viewBindMethodBuilder.build();
+            TypeSpec viewBind = TypeSpec.classBuilder(newClassName)
+                    .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+                    .addTypeVariable(TypeVariableName.get("T", typeClassName))
+                    .addSuperinterface(ParameterizedTypeName.get(VIEW_BINDER, typeClassName))
+                    .addMethod(viewBindMethod)
                     .build();
-
-            TypeSpec helloWorld =
-                    TypeSpec.classBuilder("HelloWorld").addModifiers(Modifier.PUBLIC, Modifier.FINAL).addMethod(main).build();
-            JavaFile javaFile = JavaFile.builder("com.lighters.apt", helloWorld).build();
-
+            JavaFile javaFile = JavaFile.builder(packageName, viewBind).build();
             try {
                 javaFile.writeTo(processingEnv.getFiler());
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-        return false;
     }
 
     private String getPackageName(TypeElement type) {
@@ -84,5 +126,12 @@ public class ViewBindProcessor extends AbstractProcessor {
     private static String getClassName(TypeElement type, String packageName) {
         int packageLen = packageName.length() + 1;
         return type.getQualifiedName().toString().substring(packageLen).replace('.', '$');
+    }
+
+    private class ViewBindInfo{
+        String packageName;
+        String className;
+        ClassName typeClassName;
+        List<Element> elementList = new ArrayList<>();
     }
 }

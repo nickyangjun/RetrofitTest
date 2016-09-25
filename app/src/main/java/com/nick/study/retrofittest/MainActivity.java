@@ -1,15 +1,13 @@
 package com.nick.study.retrofittest;
 
-import android.app.Activity;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.TextView;
 import android.widget.Toast;
 
-
 import com.nick.study.annotation.ViewBind;
-import com.nick.study.retrofittest.annotation.ViewBindUtil;
 import com.nick.study.retrofittest.annotation.ViewClick;
+
 
 public class MainActivity extends AppCompatActivity {
     final static String TAG = "MainActivity";
@@ -17,17 +15,20 @@ public class MainActivity extends AppCompatActivity {
     @ViewBind(R.id.user_tv)
     TextView mTextView;
 
-    @ViewBind(R.id.user_tv)
+    @ViewBind(R.id.user_tv2)
     TextView mTextView2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        com.nick.study.viewinject.ViewBind.init(this);
 //        mTextView = (TextView) findViewById(R.id.user_tv);
 
-        ViewBindUtil.initViewBind(this);
+//        ViewBindUtil.initViewBind(this);
         mTextView.setText("hahaha!!!! annotation success!!!!");
+        mTextView2.setText("hahaha!!!! annotation success!!!!");
 
 
 //        Call<User>  userCall = ApiFactory.gitHubAPI().getUserInfo("nickyangjun");

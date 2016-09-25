@@ -1,1 +1,1 @@
-include ':app', ':viewbindcompiler', ':bindannotation'
+include ':app', ':viewbindcompiler', ':bindannotation', ':viewinject'

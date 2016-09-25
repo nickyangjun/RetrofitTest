@@ -9,14 +9,18 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/app" />
+            <option value="$PROJECT_DIR$/bindannotation" />
             <option value="$PROJECT_DIR$/viewbindcompiler" />
+            <option value="$PROJECT_DIR$/viewinject" />
           </set>
         </option>
         <option name="myModules">
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/app" />
+            <option value="$PROJECT_DIR$/bindannotation" />
             <option value="$PROJECT_DIR$/viewbindcompiler" />
+            <option value="$PROJECT_DIR$/viewinject" />
           </set>
         </option>
       </GradleProjectSettings>
