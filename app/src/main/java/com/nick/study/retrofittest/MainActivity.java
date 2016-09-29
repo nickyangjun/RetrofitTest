@@ -5,8 +5,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.nick.study.annotation.BindClick;
 import com.nick.study.annotation.ViewBind;
-import com.nick.study.retrofittest.annotation.ViewClick;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -48,8 +48,9 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    @ViewClick(id = R.id.user_tv)
+    @BindClick(id = R.id.user_tv)
     public void onClick(){
         Toast.makeText(this,"hahaha!!!! annotation click success!!!!",Toast.LENGTH_SHORT).show();
     }
+
 }

@@ -1,6 +1,7 @@
 package com.nick.study;
 
 import com.google.auto.service.AutoService;
+import com.nick.study.annotation.BindClick;
 import com.nick.study.annotation.ViewBind;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
@@ -11,7 +12,6 @@ import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -26,6 +26,7 @@ import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
@@ -75,34 +76,76 @@ public class ViewBindProcessor extends AbstractProcessor {
             }
             viewBindInfo.packageName = packageName;
             viewBindInfo.className = className;
-            viewBindInfo.elementList.add(element);
+            viewBindInfo.viewBindElementList.add(element);
+            viewBindInfo.typeClassName =  ClassName.bestGuess(getClassName(enclosingElement, packageName));
+        }
+        Set<? extends Element> clickSet = roundEnv.getElementsAnnotatedWith(BindClick.class);
+        for (Element element : clickSet) {
+            if (element.getKind() != ElementKind.METHOD) {
+                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "only support class method");
+                break;
+            }
+            TypeElement enclosingElement = (TypeElement) element.getEnclosingElement();
+            String packageName = getPackageName(enclosingElement);
+            String className = getClassName(enclosingElement,packageName);
+            String classFullPath = packageName+"."+className;
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,"process: "+classFullPath);
+            ViewBindInfo viewBindInfo = targetClassMap.get(classFullPath);
+            if(viewBindInfo == null){
+                viewBindInfo = new ViewBindInfo();
+                targetClassMap.put(classFullPath,viewBindInfo);
+            }
+            viewBindInfo.packageName = packageName;
+            viewBindInfo.className = className;
+            viewBindInfo.viewClickElementList.add(element);
+            viewBindInfo.typeClassName =  ClassName.bestGuess(getClassName(enclosingElement, packageName));
         }
         buildViewBindClass(targetClassMap);
         return false;
     }
 
-    private void buildViewBindClass( Map<String, ViewBindInfo> targetClassMap){
+    private void buildViewBindClass( Map<String, ViewBindInfo> targetClassMap ){
         if(targetClassMap.size() == 0){
             return;
         }
         for (Map.Entry<String, ViewBindInfo> item : targetClassMap.entrySet()) {
             String newClassName = item.getValue().className+BINDING_CLASS_SUFFIX;
             String packageName = item.getValue().packageName;
+            ClassName typeClassName = item.getValue().typeClassName;
             String methodName = "viewBind";
-            TypeElement enclosingElement = (TypeElement) item.getValue().elementList.get(0).getEnclosingElement();
-            ClassName typeClassName = ClassName.bestGuess(getClassName(enclosingElement, packageName));
-            ClassName activity = ClassName.get("android.app", "Activity");
             MethodSpec.Builder viewBindMethodBuilder = MethodSpec.methodBuilder(methodName)
                     .addModifiers(Modifier.PUBLIC)
                     .returns(TypeName.VOID)
                     .addAnnotation(Override.class)
                     .addParameter(typeClassName, "target", Modifier.FINAL);
 
-            for(Element element : item.getValue().elementList){
+            for(Element element : item.getValue().viewBindElementList){
                 int id = element.getAnnotation(ViewBind.class).value();
                 ClassName viewClass = ClassName.bestGuess(element.asType().toString());
                 viewBindMethodBuilder.addStatement("target.$L=($T)target.findViewById($L)",element.getSimpleName().toString(),viewClass, id);
             }
+
+            if(item.getValue().viewClickElementList.size() > 0){
+                viewBindMethodBuilder.addStatement("$T listener", ClassTypeUtils.ANDROID_ON_CLICK_LISTENER);
+            }
+            for(Element element : item.getValue().viewClickElementList){
+                int id = element.getAnnotation(BindClick.class).id();
+                // declare OnClickListener anonymous class
+                TypeSpec listener = TypeSpec.anonymousClassBuilder("")
+                        .addSuperinterface(ClassTypeUtils.ANDROID_ON_CLICK_LISTENER)
+                        .addMethod(MethodSpec.methodBuilder("onClick")
+                                .addAnnotation(Override.class)
+                                .addModifiers(Modifier.PUBLIC)
+                                .returns(TypeName.VOID)
+                                .addParameter(ClassTypeUtils.ANDROID_VIEW, "view")
+                                .addStatement("target.$N()",((ExecutableElement)element).getSimpleName())
+                                .build())
+                        .build();
+                viewBindMethodBuilder.addStatement("listener = $L ", listener);
+                // set listeners
+                viewBindMethodBuilder.addStatement("target.findViewById($L).setOnClickListener(listener)", id);
+            }
+
             MethodSpec viewBindMethod = viewBindMethodBuilder.build();
             TypeSpec viewBind = TypeSpec.classBuilder(newClassName)
                     .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
@@ -110,6 +153,7 @@ public class ViewBindProcessor extends AbstractProcessor {
                     .addSuperinterface(ParameterizedTypeName.get(VIEW_BINDER, typeClassName))
                     .addMethod(viewBindMethod)
                     .build();
+
             JavaFile javaFile = JavaFile.builder(packageName, viewBind).build();
             try {
                 javaFile.writeTo(processingEnv.getFiler());
@@ -132,6 +176,7 @@ public class ViewBindProcessor extends AbstractProcessor {
         String packageName;
         String className;
         ClassName typeClassName;
-        List<Element> elementList = new ArrayList<>();
+        List<Element> viewBindElementList = new ArrayList<>();
+        List<Element> viewClickElementList = new ArrayList<>();
     }
 }
